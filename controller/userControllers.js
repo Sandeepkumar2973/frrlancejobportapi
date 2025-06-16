@@ -9,6 +9,7 @@ import axios from 'axios';
 import ResetOtpModel from '../models/ResetOtpModel.js';
 import ApplicationModel from '../models/ApplicationModel.js';
 import cloudinary from '../config/cloudinary.js';
+import notificationModel from '../models/notificationModel.js';
 // send otp on email 
 export const sendOtpEmail = async (email, OTP) => {
     console.log(email, OTP, 'email and phone');
@@ -739,39 +740,39 @@ export const removeExperience = async (req, res) => {
 };
 
 // job apply by user
-export const applyJobByUser = async (req, res) => {
-    try {
+// export const applyJobByUser = async (req, res) => {
+//     try {
 
-        const { jobId, userId } = req.params;
-        const { adminId } = req.body; // Assuming adminId is passed in the request body
-        // const userId = req.user.id; // Assuming user ID is available in req.user
+//         const { jobId, userId } = req.params;
+//         const { adminId } = req.body; // Assuming adminId is passed in the request body
+//         // const userId = req.user.id; // Assuming user ID is available in req.user
 
-        if (!jobId) {
-            return res.status(400).send({ success: false, message: "Job ID is required" });
-        }
+//         if (!jobId) {
+//             return res.status(400).send({ success: false, message: "Job ID is required" });
+//         }
 
-        // Check if the user has already applied for this job
-        const existingApplication = await ApplicationModel.findOne({ userId, jobId });
-        if (existingApplication) {
-            return res.status(400).send({ success: false, message: "You have already applied for this job" });
-        }
+//         // Check if the user has already applied for this job
+//         const existingApplication = await ApplicationModel.findOne({ userId, jobId });
+//         if (existingApplication) {
+//             return res.status(400).send({ success: false, message: "You have already applied for this job" });
+//         }
 
-        const newApplication = new ApplicationModel({ userId, jobId, adminId });
-        await newApplication.save();
+//         const newApplication = new ApplicationModel({ userId, jobId, adminId });
+//         await newApplication.save();
 
-        res.status(201).send({
-            success: true,
-            message: "Job application submitted successfully",
-            data: newApplication
-        });
-    } catch (error) {
-        res.status(500).send({
-            success: false,
-            message: "Error applying for job",
-            error: error.message
-        });
-    }
-};
+//         res.status(201).send({
+//             success: true,
+//             message: "Job application submitted successfully",
+//             data: newApplication
+//         });
+//     } catch (error) {
+//         res.status(500).send({
+//             success: false,
+//             message: "Error applying for job",
+//             error: error.message
+//         });
+//     }
+// };
 
 export const getAppliedJobsByUserId = async (req, res) => {
     try {
@@ -873,5 +874,48 @@ export const removeResume = async (req, res) => {
         });
     } catch (error) {
         res.status(500).send({ success: false, message: 'Error removing resume', error: error.message });
+    }
+};
+export const applyJobByUser = async (req, res) => {
+    try {
+        const { jobId, userId } = req.params;
+        const { adminId } = req.body; // यह मानकर चला कि adminId आपने request body से भेजा
+
+        if (!jobId) {
+            return res.status(400).send({ success: false, message: "Job ID is required" });
+        }
+
+        // Check existing application
+        const existingApplication = await ApplicationModel.findOne({ userId, jobId });
+        if (existingApplication) {
+            return res.status(400).send({ success: false, message: "You have already applied for this job" });
+        }
+
+        // Save new application
+        const newApplication = await new ApplicationModel({ userId, jobId, adminId }).save();
+
+        // === Notification Create ===
+        await notificationModel.create({
+            to: adminId,
+            toModel: 'Admin',
+            type: 'job_application',
+            title: 'New Job Application',
+            message: `User (${userId}) has applied for job (${jobId})`,
+            isRead: false,
+            createdAt: new Date()
+        });
+        // ==========================
+
+        return res.status(201).send({
+            success: true,
+            message: "Job application submitted successfully, admin notified",
+            data: newApplication
+        });
+    } catch (error) {
+        return res.status(500).send({
+            success: false,
+            message: "Error applying for job",
+            error: error.message
+        });
     }
 };

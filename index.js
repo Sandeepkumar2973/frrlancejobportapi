@@ -6,6 +6,7 @@ import bodyParser from 'body-parser';
 import AdminRoutes from './routes/adminRoutes.js';
 import JobRoutes from './routes/jobRoutes.js';
 import UserRoutes from './routes/userRoutes.js';
+import NotificationRoutes from './routes/notificationRoutes.js';
 // import superAdminRoutes from './routes/superAdminRoutes.js';
 // import UserRoutes from './routes/userRoutes.js'; // You can uncomment if needed
 
@@ -35,6 +36,8 @@ app.use('/api/v1/admin', AdminRoutes);
 // app.use('/api/v1/superAdmin', superAdminRoutes);
 app.use('/api/v1/job', JobRoutes);
 app.use('/api/v1/user', UserRoutes);
+app.use('/api/v1/user', UserRoutes);
+app.use('/api/v1/notification', NotificationRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;

@@ -1,4 +1,5 @@
 import ApplicationModel from "../models/ApplicationModel.js";
+import NotificationModel from '../models/notificationModel.js';
 
 export const getApplicationByAdminId = async (req, res) => {
     try {
@@ -53,22 +54,27 @@ export const getUserApplicationById = async (req, res) => {
     }
 };
 
-// change application status by adminId
+
 export const changeApplicationStatus = async (req, res) => {
     try {
         const { status } = req.body;
         const { applicationId } = req.params;
+
         if (!status || !applicationId) {
             return res.status(400).send({
                 success: false,
                 message: "Status and applicationId are required"
             });
         }
+
+        // Update application status
         const updatedApplication = await ApplicationModel.findByIdAndUpdate(
             applicationId,
-            { status: status },
+            { status },
             { new: true }
-        ).populate('jobId', 'title companyName').populate('userId', 'name email');
+        )
+            .populate('jobId', 'title company')  // ensure these fields are correct
+            .populate('userId', 'name email');
 
         if (!updatedApplication) {
             return res.status(404).send({
@@ -77,9 +83,21 @@ export const changeApplicationStatus = async (req, res) => {
             });
         }
 
+        // === Send Notification to User ===
+        await NotificationModel.create({
+            to: updatedApplication.userId._id,
+            toModel: 'User',
+            type: 'status_update',
+            title: `Job Application ${status}`,
+            message: `Your application has been ${status}${updatedApplication.jobId?.title ? ` for "${updatedApplication.jobId.title}"` : ''}${updatedApplication.jobId?.company ? ` at "${updatedApplication.jobId.company}"` : ''}.`,
+            isRead: false,
+            createdAt: new Date()
+        });
+        // ==================================
+
         res.status(200).send({
             success: true,
-            message: "Application status updated successfully",
+            message: "Application status updated and user notified",
             data: updatedApplication
         });
     } catch (error) {
@@ -90,3 +108,31 @@ export const changeApplicationStatus = async (req, res) => {
         });
     }
 };
+
+// get notification by admin
+export const getNotificationsForAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+
+    const notifications = await NotificationModel.find({
+      to: adminId,
+      toModel: "Admin"
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: "Notifications for admin fetched",
+      data: notifications
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching admin notifications",
+      error: err.message
+    });
+  }
+};
+// controllers/applicationController.js
+
+
+
