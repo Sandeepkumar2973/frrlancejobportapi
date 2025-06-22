@@ -2,7 +2,7 @@ import JobModel from "../models/jobModel.js";
 
 export const createJob = async (req, res) => {
     try {
-        const { title, description, company, location, adminId, openings, salaryRange, jobType, experienceRequired, skillsRequired, industry, category } = req.body;
+        const { title, description, company, location, adminId, openings, salaryRange, jobType, experienceRequired, skillsRequired, industry, category, deadline, workMode } = req.body;
         const job = new JobModel({
             title,
             adminId,
@@ -13,9 +13,11 @@ export const createJob = async (req, res) => {
             salaryRange,
             jobType,
             experienceRequired,
-            skillsRequired: skillsRequired.split(',').map(skill => skill.trim()), // Convert comma-separated string to array
+            skillsRequired: skillsRequired, // Convert comma-separated string to array
             industry,
-            category
+            category,
+            deadline,
+            workMode
         });
         await job.save();
         res.status(201).send({
@@ -131,8 +133,7 @@ export const deleteJobById = async (req, res) => {
 export const updateJobById = async (req, res) => {
     try {
         const id = req.params.id;
-        const { title, description, company, location, salary, openings, salaryRange, jobType, experienceRequired, skillsRequired, industry, category } = req.body;
-        const job = await JobModel.findByIdAndUpdate(id, {
+        const {
             title,
             description,
             company,
@@ -142,32 +143,57 @@ export const updateJobById = async (req, res) => {
             salaryRange,
             jobType,
             experienceRequired,
-            skillsRequired: skillsRequired.split(',').map(skill => skill.trim()), // Convert comma-separated string to array
+            skillsRequired,
             industry,
-            category
-        }, { new: true });
+            category,
+            status,
+            workMode,
+            deadline,
+        } = req.body;
+
+        const job = await JobModel.findByIdAndUpdate(
+            id,
+            {
+                title,
+                description,
+                company,
+                location,
+                salary,
+                openings,
+                salaryRange,
+                jobType,
+                experienceRequired,
+                skillsRequired,
+                industry,
+                category,
+                status,
+                workMode,
+                deadline,
+            },
+            { new: true }
+        );
+
         if (!job) {
-            return res.status(404)
-                .send({
-                    success: false,
-                    message: " job not found"
-                })
-        }
-        res.status(200)
-            .send({
-                success: true,
-                message: " job updated successfully",
-                data: job
-            });
-    } catch (error) {
-        res.status(500)
-            .send({
+            return res.status(404).send({
                 success: false,
-                message: " error in updating job",
-                error: error.message
-            })
+                message: "Job not found",
+            });
+        }
+
+        res.status(200).send({
+            success: true,
+            message: "Job updated successfully",
+            data: job,
+        });
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            message: "Error in updating job",
+            error: error.message,
+        });
     }
-}
+};
+
 
 export const getJobsByAdminId = async (req, res) => {
     try {
@@ -176,10 +202,12 @@ export const getJobsByAdminId = async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
+        // Total count without pagination or sorting
         const total = await JobModel.countDocuments({ adminId });
 
+        // Get paginated & sorted jobs
         const jobs = await JobModel.find({ adminId })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: -1 }) // Sort newest first
             .skip(skip)
             .limit(limit);
 
@@ -211,6 +239,27 @@ export const getJobsByAdminId = async (req, res) => {
     }
 };
 
+// job count 
+export const getJobCountByAdmin = async (req, res) => {
+    try {
+        const adminId = req.params.id;
+        const count = await JobModel.countDocuments({ adminId });
+
+        res.status(200).send({
+            success: true,
+            message: "Job count retrieved successfully",
+            count: count
+        });
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            message: "Error in getting job count",
+            error: error.message
+        });
+    }
+};
+
+
 // filter jobs by title, location, and job type
 export const filterJobs = async (req, res) => {
     try {
@@ -233,7 +282,7 @@ export const filterJobs = async (req, res) => {
             filter.skillsRequired = { $in: skillsRequired.split(',').map(skill => skill.trim()) };
         }
 
-        
+
 
         const jobs = await JobModel.find(filter).sort({ createdAt: -1 });
 

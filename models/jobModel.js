@@ -9,11 +9,17 @@ const JobSchema = new mongoose.Schema({
     openings: Number,
     salaryRange: String,
     jobType: String,
+    workMode: String,
     experienceRequired: String,
     skillsRequired: [String],
     description: String,
     industry: String,
-    category: String,
+    deadline: Date,
+    status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
+    timestamp: {
+        type: Date,
+        default: Date.now,
+    },
 });
 
 const Jobs = mongoose.model('Job', JobSchema);

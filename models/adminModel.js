@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const AdminSchema = new mongoose.Schema({
     fullName: { type: String, required: true },
     companyName: String,
+    foto: String,
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     status: { type: String, default: 'active' }, // active/inactive

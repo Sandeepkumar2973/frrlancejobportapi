@@ -7,6 +7,7 @@ import AdminRoutes from './routes/adminRoutes.js';
 import JobRoutes from './routes/jobRoutes.js';
 import UserRoutes from './routes/userRoutes.js';
 import NotificationRoutes from './routes/notificationRoutes.js';
+import chatRoutes from './routes/chatRoutes.js'
 // import superAdminRoutes from './routes/superAdminRoutes.js';
 // import UserRoutes from './routes/userRoutes.js'; // You can uncomment if needed
 
@@ -38,7 +39,7 @@ app.use('/api/v1/job', JobRoutes);
 app.use('/api/v1/user', UserRoutes);
 app.use('/api/v1/user', UserRoutes);
 app.use('/api/v1/notification', NotificationRoutes);
-
+app.use('/api/v1/message', chatRoutes)
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

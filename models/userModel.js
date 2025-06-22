@@ -31,9 +31,10 @@ const skillSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema({
     fullName: { type: String, required: true },
+    image: String,
     email: { type: String, unique: true, required: true },
-    phone: { type: String, unique: true, required: false }, // Phone is optional for social login
-    password: { type: String, required: false }, // Password is optional for social login
+    phone: { type: String, unique: true, required: false },
+    password: { type: String, required: false },
     profilePicture: String,
     dob: Date,
     gender: String,

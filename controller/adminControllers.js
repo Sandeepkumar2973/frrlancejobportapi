@@ -7,6 +7,7 @@ import TempUserModel from '../models/TempUserModel.js';
 import Admin from '../models/adminModel.js';
 import ResetOtpModel from '../models/ResetOtpModel.js';
 import ApplicationModel from '../models/ApplicationModel.js';
+import moment from "moment"; // optional, for date formatting
 
 export const createAmin = async (req, res) => {
     // console.log(req.body, 'jijojo');
@@ -71,7 +72,7 @@ export const loginAdmin = async (req, res) => {
         }
 
         // Generate JWT token
-        const token = jwt.sign({ _id: adminData._id, role: adminData.role }, process.env.SECRET_KEY, {
+        const token = jwt.sign({ _id: adminData._id, role: adminData.role, name: adminData.fullName }, process.env.SECRET_KEY, {
             expiresIn: "7d"
         });
 
@@ -373,7 +374,7 @@ export const resetPassword = async (req, res) => {
 export const getUserApplicationById = async (req, res) => {
     try {
         const { adminId } = req.params;
-        const application = await ApplicationModel.findOne({ adminId })
+        const application = await ApplicationModel.find({ adminId })
             .populate('jobId', 'title companyName')
             .populate('userId', 'fullName email phone resumeUrl');
         if (!application) {
@@ -394,4 +395,89 @@ export const getUserApplicationById = async (req, res) => {
             error: error.message
         });
     }
-};  
+};
+// application count 
+export const getApplicationCountByAdmin = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+        const count = await ApplicationModel.countDocuments({ adminId });
+
+        res.status(200).send({
+            success: true,
+            message: "Application count retrieved successfully",
+            count: count
+        });
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            message: "Error in counting applications",
+            error: error.message
+        });
+    }
+};
+
+// user count 
+export const countUniqueApplicantsByAdmin = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+
+        // Get all unique userIds who applied to jobs of this admin
+        const uniqueUserIds = await ApplicationModel.distinct("userId", { adminId });
+
+        res.status(200).send({
+            success: true,
+            message: "Unique applicant count retrieved successfully",
+            count: uniqueUserIds.length
+        });
+
+    } catch (error) {
+        res.status(500).send({
+            success: false,
+            message: "Error in getting applicant count",
+            error: error.message
+        });
+    }
+};
+
+// controllers/applicationController.js
+
+
+import mongoose from "mongoose";
+
+export const getApplicantsByDate = async (req, res) => {
+  const { adminId } = req.params;
+
+  try {
+    const result = await ApplicationModel.aggregate([
+      {
+        $match: {
+          adminId: new mongoose.Types.ObjectId(adminId),
+        },
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const formatted = result.map((item) => ({
+      date: item._id, // e.g., "2024-06-21"
+      count: item.count,
+    }));
+
+    res.status(200).json({ success: true, data: formatted });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error getting applicant chart data",
+      error: error.message,
+    });
+  }
+};
+;
+
