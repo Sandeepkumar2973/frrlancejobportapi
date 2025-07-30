@@ -134,10 +134,10 @@ export const registerMootUser = async (req, res) => {
     const MootCourtId = `LAWVS_M25_${Math.floor(Math.random() * 1000)}`;
 
     // ✅ Check OTP verified
-    const otpRecord = await OTP.findOne({ mobile, verified: true });
-    if (!otpRecord) {
-      return res.status(400).json({ message: "Please verify OTP first" });
-    }
+    // const otpRecord = await OTP.findOne({ mobile, verified: true });
+    // if (!otpRecord) {
+    //   return res.status(400).json({ message: "Please verify OTP first" });
+    // }
 
     // ✅ Create user
     const newUser = await MootUserModel.create({
@@ -150,7 +150,7 @@ export const registerMootUser = async (req, res) => {
     });
 
     // ✅ Remove OTP after success (optional)
-    await OTP.deleteMany({ mobile });
+    // await OTP.deleteMany({ mobile });
 
     res.status(201).json({
       message: "Moot user registered successfully",
