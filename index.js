@@ -8,9 +8,8 @@ import JobRoutes from './routes/jobRoutes.js';
 import UserRoutes from './routes/userRoutes.js';
 import NotificationRoutes from './routes/notificationRoutes.js';
 import chatRoutes from './routes/chatRoutes.js'
-// import superAdminRoutes from './routes/superAdminRoutes.js';
-// import UserRoutes from './routes/userRoutes.js'; // You can uncomment if needed
-
+import superAdminRoutes from './routes/superAdminRoutes.js'
+import MootUserRoutes from './routes/MootUserRoutes.js';
 // Load environment variables
 dotenv.config();
 
@@ -29,17 +28,17 @@ mongoose.connect(process.env.MONGO_URL,).then(() => {
 
 // Root route
 app.get('/', (req, res) => {
-    res.send('🚀 Candidate Portal API is running...');
+    res.send(' Candidate Portal API is running...');
 });
 
 // Routes
-app.use('/api/v1/admin', AdminRoutes);
+// app.use('/api/v1/admin', AdminRoutes);
 // app.use('/api/v1/superAdmin', superAdminRoutes);
-app.use('/api/v1/job', JobRoutes);
+// app.use('/api/v1/job', JobRoutes);
 app.use('/api/v1/user', UserRoutes);
-app.use('/api/v1/user', UserRoutes);
-app.use('/api/v1/notification', NotificationRoutes);
-app.use('/api/v1/message', chatRoutes)
+app.use('/api/v1/MootUser', MootUserRoutes);
+// app.use('/api/v1/notification', NotificationRoutes);
+// app.use('/api/v1/message', chatRoutes)
 // Start the server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -4,10 +4,10 @@ import { deleteMessageById, getAllConversations, getMessages, getOrCreateConvers
 
 const router = express.Router();
 
-router.post('/conversation', getOrCreateConversation);
-router.post('/message', sendMessage);
-router.get('/:conversationId', getMessages);
-router.get('/conversations', getAllConversations); // Admin panel
-router.delete('/delete/:messageId', deleteMessageById)
+// router.post('/conversation', getOrCreateConversation);
+// router.post('/message', sendMessage);
+// router.get('/:conversationId', getMessages);
+// router.get('/conversations', getAllConversations); // Admin panel
+// router.delete('/delete/:messageId', deleteMessageById)
 
 export default router;

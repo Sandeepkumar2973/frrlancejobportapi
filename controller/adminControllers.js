@@ -1,18 +1,18 @@
 import express from 'express';
+import mongoose from "mongoose";
+
 import AdminModel from '../models/adminModel.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from "bcryptjs";
 import { sendMobileOtp, sendOtpEmail } from './userControllers.js';
 import TempUserModel from '../models/TempUserModel.js';
-import Admin from '../models/adminModel.js';
 import ResetOtpModel from '../models/ResetOtpModel.js';
 import ApplicationModel from '../models/ApplicationModel.js';
-import moment from "moment"; // optional, for date formatting
 
 export const createAmin = async (req, res) => {
     // console.log(req.body, 'jijojo');
     try {
-        const { fullName, email, companyName, password } = req.body;
+        const {  email, companyName, password,mobile  } = req.body;
         const existingAdmin = await AdminModel.findOne({
             email: email
         })
@@ -30,7 +30,8 @@ export const createAmin = async (req, res) => {
             fullName,
             email,
             companyName,
-            password: hashedPassword
+            password: hashedPassword,
+            mobile
         });
 
         await newAdmin.save();
@@ -59,7 +60,7 @@ export const loginAdmin = async (req, res) => {
                 message: "Admin not found"
             });
         }
-        console.log(adminData, 'admin data');
+        // console.log(adminData, 'admin data');
 
 
         // Compare passwords
@@ -442,42 +443,41 @@ export const countUniqueApplicantsByAdmin = async (req, res) => {
 // controllers/applicationController.js
 
 
-import mongoose from "mongoose";
 
 export const getApplicantsByDate = async (req, res) => {
-  const { adminId } = req.params;
+    const { adminId } = req.params;
 
-  try {
-    const result = await ApplicationModel.aggregate([
-      {
-        $match: {
-          adminId: new mongoose.Types.ObjectId(adminId),
-        },
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-          },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { _id: 1 } },
-    ]);
+    try {
+        const result = await ApplicationModel.aggregate([
+            {
+                $match: {
+                    adminId: new mongoose.Types.ObjectId(adminId),
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
+                    },
+                    count: { $sum: 1 },
+                },
+            },
+            { $sort: { _id: 1 } },
+        ]);
 
-    const formatted = result.map((item) => ({
-      date: item._id, // e.g., "2024-06-21"
-      count: item.count,
-    }));
+        const formatted = result.map((item) => ({
+            date: item._id, // e.g., "2024-06-21"
+            count: item.count,
+        }));
 
-    res.status(200).json({ success: true, data: formatted });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error getting applicant chart data",
-      error: error.message,
-    });
-  }
+        res.status(200).json({ success: true, data: formatted });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error getting applicant chart data",
+            error: error.message,
+        });
+    }
 };
 ;
 
