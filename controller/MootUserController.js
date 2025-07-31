@@ -1,42 +1,9 @@
 import MootUserModel from "../models/MootUserModel.js";
 import jwt from "jsonwebtoken";
 import axios from "axios";
-import OTP from "../models/otpModel.js";
-
-// 1️⃣ Send OTP
-// export const sendOtp = async (req, res) => {
-//   try {
-//     const { mobile } = req.body;
-
-//     if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
-//       return res.status(400).json({ message: "Invalid mobile number" });
-//     }
-
-//     // Generate OTP
-//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-//     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-
-//     // Remove old OTPs for this mobile (optional)
-//     await OTP.deleteMany({ mobile });
-
-//     // Save new OTP
-//     await OTP.create({ mobile, otp, otpExpiry });
-
-//     // 👉 TODO: Integrate real SMS send here
-//     // let msg = `Please use this code as your one-time password (OTP). It will expire in 3 minutes.\nYour OTP is ${OTP}.\nNever share your OTP with anyone`;
-
-//     // await axios.get(
-//     //   `https://www.bulksmsplans.com/api/verify?api_id=APIVf8Tq5w4115662&api_password=9Rtb6BLx&sms_type=Transactional&sms_encoding=text&sender=BLKSMS&number=123456789&message=Your bulksmsplanss Verification Code is : {{otp}}`
-//     // );
-
-//     res.status(200).json({ message: "OTP sent", otp }); // Remove OTP in production!
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Failed to send OTP" });
-//   }
-// };
-// Assuming you have an OTP model
-
+import OTPModel from "../models/otpModel.js";
+import sendOtpEmail from "./sendOtpEmail.js";
+import bcrypt from "bcryptjs";
 export const sendOtp = async (req, res) => {
   try {
     const { mobile } = req.body;
@@ -165,44 +132,6 @@ export const registerMootUser = async (req, res) => {
   }
 };
 
-// export const registerMootUser = async (req, res) => {
-//   try {
-//     const { name, institution, course, pursuingYear, email, mobile, password } =
-//       req.body;
-
-//     // Check if user already exists
-//     const existing = await MootUserModel.findOne({ email });
-//     if (existing) {
-//       return res.status(400).json({ message: "Email already registered." });
-//     }
-
-//     // Create new user
-//     const newUser = new MootUserModel({
-//       name,
-//       institution,
-//       course,
-//       pursuingYear,
-//       email,
-//       mobile,
-//       password,
-//     });
-
-//     await newUser.save();
-
-//     res.status(201).json({
-//       message: "Registration successful",
-//       user: {
-//         id: newUser._id,
-//         name: newUser.name,
-//         email: newUser.email,
-//       },
-//     });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server Error" });
-//   }
-// };
-
 export const loginMootUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -302,5 +231,164 @@ export const updateMootUserProfile = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+// forget pass ussing email otp
+// controllers/authController.js
+
+export const MootsendOtpController = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required" });
+  }
+
+  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiryTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+    const sent = await sendOtpEmail(email, otp);
+    if (!sent) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Failed to send OTP" });
+    }
+
+    // Remove existing OTPs
+    await OTPModel.deleteMany({ email });
+
+    // Save new OTPModel with expiry
+    await new OTPModel({
+      email,
+      otp,
+      otpExpiry: expiryTime, // ✅ REQUIRED field
+    }).save();
+
+    res.status(200).json({ success: true, message: "OTP sent successfully" });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error sending OTP",
+      error: error.message,
+    });
+  }
+};
+
+
+export const verifyOtpController = async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).json({
+      success: false,
+      message: "Email and OTP are required",
+    });
+  }
+
+  try {
+    const otpEntry = await OTPModel.findOne({ email });
+
+    if (!otpEntry) {
+      return res.status(400).json({
+        success: false,
+        message: "No OTP found for this email",
+      });
+    }
+
+    // Check if OTP is expired
+    if (otpEntry.otpExpiry < new Date()) {
+      await OTPModel.deleteMany({ email }); // Clean up
+      return res.status(400).json({
+        success: false,
+        message: "OTP has expired",
+      });
+    }
+
+    // Check if OTP matches
+    if (otpEntry.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    // OTP is valid
+    // await OTPModel.deleteMany({ email }); // Clear used OTP
+    return res.status(200).json({
+      success: true,
+      message: "OTP verified successfully",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify OTP",
+      error: error.message,
+    });
+  }
+};
+
+
+export const MootresetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({
+      success: false,
+      message: "Email, OTP, and new password are required",
+    });
+  }
+
+  try {
+    // 1. Check OTP entry
+    const otpEntry = await OTPModel.findOne({ email });
+    if (!otpEntry) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP not found",
+      });
+    }
+
+    // 2. Check OTP match and expiry
+    const isOtpValid = otpEntry.otp === otp;
+    // const isOtpNotExpired = new Date(otpEntry.otpExpiry) > new Date();
+
+    if (!isOtpValid ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    // 3. Check if user exists
+    const user = await MootUserModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // 4. Hash and update password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    // 5. Delete OTP entry
+    await OTPModel.deleteOne({ _id: otpEntry._id });
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to reset password",
+      error: error.message,
+    });
   }
 };
