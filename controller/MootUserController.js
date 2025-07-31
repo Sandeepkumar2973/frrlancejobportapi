@@ -76,7 +76,10 @@ export const sendOtp = async (req, res) => {
     });
 
     // console.log(response.data, "SMS API Response");
-console.log("Full SMS API Response:", JSON.stringify(response.data, null, 2));
+    console.log(
+      "Full SMS API Response:",
+      JSON.stringify(response.data, null, 2)
+    );
 
     // Check success from response
     if (response.data.code !== 200) {
