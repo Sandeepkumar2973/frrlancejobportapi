@@ -277,7 +277,6 @@ export const MootsendOtpController = async (req, res) => {
   }
 };
 
-
 export const verifyOtpController = async (req, res) => {
   const { email, otp } = req.body;
 
@@ -321,7 +320,6 @@ export const verifyOtpController = async (req, res) => {
       success: true,
       message: "OTP verified successfully",
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -330,7 +328,6 @@ export const verifyOtpController = async (req, res) => {
     });
   }
 };
-
 
 export const MootresetPassword = async (req, res) => {
   const { email, otp, newPassword } = req.body;
@@ -356,7 +353,7 @@ export const MootresetPassword = async (req, res) => {
     const isOtpValid = otpEntry.otp === otp;
     // const isOtpNotExpired = new Date(otpEntry.otpExpiry) > new Date();
 
-    if (!isOtpValid ) {
+    if (!isOtpValid) {
       return res.status(400).json({
         success: false,
         message: "Invalid or expired OTP",
@@ -365,18 +362,15 @@ export const MootresetPassword = async (req, res) => {
 
     // 3. Check if user exists
     const user = await MootUserModel.findOne({ email });
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "User not found",
       });
     }
-
-    // 4. Hash and update password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
+    user.password = newPassword;
     await user.save();
-
     // 5. Delete OTP entry
     await OTPModel.deleteOne({ _id: otpEntry._id });
 
